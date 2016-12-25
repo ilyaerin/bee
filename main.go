@@ -9,13 +9,14 @@ import (
 	"os"
 	"strings"
 	"strconv"
+	"github.com/fatih/color"
 )
 
 const COUNT = 75
 const BASES_COUNT = 3
-const WIDTH = 150
+const WIDTH = 120
 const HEIGHT = 30
-const TURN_TIME = 100
+const TURN_TIME = 250
 
 type Point struct {
 	x int
@@ -68,21 +69,26 @@ func loop(bees [COUNT*BASES_COUNT]*Bee, input string) {
 
 func Monitoring(bees [COUNT*BASES_COUNT]*Bee)  {
 	t := 0
+	y := color.New(color.FgHiYellow).SprintfFunc()
+	b := color.New(color.FgBlue).SprintfFunc()
+	w := color.New(color.FgWhite).SprintfFunc()
+
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
 		t += 1
-		out := fmt.Sprintf("Turn: %d\n", t)
+		//out := fmt.Sprintf("Turn: %d\n", t)
+		out := w("Turn: %d\n", t)
 		for j := 0; j < HEIGHT; j++ {
 			for i := 0; i < WIDTH; i++ {
 				s := " "
 				for _, bee := range bees {
 					if bee.x == i && bee.y == j && bee.live {
-						s = "*"
+						s = y("*")
 					}
 				}
 				for _, base := range bases {
 					if base.x == i && base.y == j {
-						s = "O"
+						s = b("@")
 					}
 				}
 				//fmt.Print(s)
