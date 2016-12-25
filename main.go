@@ -11,10 +11,11 @@ import (
 	"strconv"
 )
 
-const COUNT = 75
+const COUNT = 750
 const BASES_COUNT = 3
 const WIDTH = 150
 const HEIGHT = 30
+const TURN_TIME = 100
 
 type Point struct {
 	x int
@@ -67,7 +68,7 @@ func loop(bees [COUNT*BASES_COUNT]*Bee, input string) {
 
 func Monitoring(bees [COUNT*BASES_COUNT]*Bee)  {
 	t := 0
-	ticker := time.NewTicker(time.Millisecond * 1000)
+	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
 		t += 1
 		out := fmt.Sprintf("Turn: %d\n", t)
@@ -92,7 +93,6 @@ func Monitoring(bees [COUNT*BASES_COUNT]*Bee)  {
 		}
 		exec.Command("sh", "-c", "clear")
 		fmt.Println(out)
-		time.Sleep(time.Second * 1)
 	}
 }
 
@@ -104,7 +104,7 @@ func (bee *Bee) Move(x int, y int) {
 }
 
 func (bee *Bee) Living() {
-	ticker := time.NewTicker(time.Millisecond * 500)
+	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
 		bee.Move(rand.Intn(3) - 1, rand.Intn(3) - 1)
 	}
