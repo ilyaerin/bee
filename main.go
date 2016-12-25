@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-const COUNT = 750
+const COUNT = 75
 const BASES_COUNT = 3
 const WIDTH = 150
 const HEIGHT = 30
