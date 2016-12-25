@@ -106,12 +106,23 @@ func (bee *Bee) Move(x int, y int) {
 func (bee *Bee) Living() {
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
-		bee.Move(rand.Intn(3) - 1, rand.Intn(3) - 1)
+		if bee.live {
+			bee.Move(rand.Intn(3)-1, rand.Intn(3)-1)
+		} else {
+			bee.Revival(1 + rand.Intn(5))
+		}
 	}
 }
 
 func (bee *Bee) Kill() {
 	bee.live = false
+}
+
+func (bee *Bee) Revival(seconds int) {
+	time.Sleep(time.Second * time.Duration(seconds))
+	bee.x = bee.base.x
+	bee.y = bee.base.y
+	bee.live = true
 }
 
 func Born(base *Point) (bee *Bee) {
