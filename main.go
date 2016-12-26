@@ -12,11 +12,11 @@ import (
 	"strings"
 )
 
-const COUNT = 200
+const COUNT = 250
 const BASES_COUNT = 5
 const WIDTH = 150
 const HEIGHT = 35
-const TURN_TIME = 20
+const TURN_TIME = 50
 const HIT = 80
 const HIT_BACK = 30
 const BASE_HEALTH = 500
