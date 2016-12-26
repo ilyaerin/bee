@@ -71,8 +71,8 @@ func loop(bees [COUNT*BASES_COUNT]*Bee, input string) {
 		// Killing all bees from base
 		for _, bee := range bees {
 			id, _ := strconv.Atoi(input)
-			bases[id].color = randomColor() // Change color of base
-			if bases[id] == bee.base { bee.Kill() }
+			bases[id - 1].color = randomColor() // Change color of base
+			if bases[id - 1] == bee.base { bee.Kill() }
 		}
 	case "q":
 		os.Exit(0)
