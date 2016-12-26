@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const COUNT = 50
+const COUNT = 200
 const BASES_COUNT = 5
 const WIDTH = 150
 const HEIGHT = 35
@@ -91,13 +91,9 @@ func loop(input string) {
 }
 
 func Monitoring()  {
-	t := 0
-
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
-		t += 1
-
-		out := fmt.Sprintf("Turn: %d. %s\n", t, basesStat())
+		out := fmt.Sprintf(Stat())
 		for j := 0; j < HEIGHT; j++ {
 			for i := 0; i < WIDTH; i++ {
 				s := " "
@@ -125,12 +121,17 @@ func Monitoring()  {
 	}
 }
 
-func basesStat() string {
-	out := []string{}
-	for i, base := range bases {
-		out = append(out, base.color("Base %d: %d | %d | %v", i + 1, base.count, base.health, base.live))
+func Stat() string {
+	beesCount := 0
+	for _, bee := range bees {
+		if bee.live { beesCount += 1 }
 	}
-	return strings.Join(out, " ")
+
+	outBases := []string{}
+	for _, base := range bases {
+		outBases = append(outBases, base.color("[Bees: %d Health: %d]", base.count, base.health))
+	}
+	return fmt.Sprintf("All bees: %d %s\n", beesCount, strings.Join(outBases, " "))
 }
 
 func checkGameOver() bool {
