@@ -8,13 +8,21 @@ import (
 	"os"
 	"strconv"
 	"github.com/fatih/color"
+	"github.com/nsf/termbox-go" // TODO maybe change fatih/color
+	"strings"
 )
 
 const COUNT = 50
-const BASES_COUNT = 4
-const WIDTH = 180
-const HEIGHT = 46
-const TURN_TIME = 50
+const BASES_COUNT = 5
+const WIDTH = 150
+const HEIGHT = 35
+const TURN_TIME = 20
+const HIT = 80
+const HIT_BACK = 30
+const BASE_HEALTH = 500
+const BEE_HEALTH = 200
+const BASE_MOVING_PERCENT = 10
+const TIME_TO_REVIVAL = 10
 
 type Point struct {
 	x int
@@ -25,11 +33,15 @@ type Bee struct{
 	Point
 	base *Base
 	live bool
+	health int
 }
 
 type Base struct {
 	Point
 	color func(format string, a ...interface{}) string
+	count int
+	live bool
+	health int
 }
 
 var colors = []color.Attribute{
@@ -42,52 +54,50 @@ var colors = []color.Attribute{
 }
 
 var bases [BASES_COUNT]*Base
+var bees [COUNT*BASES_COUNT]*Bee
 
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	var bees [COUNT*BASES_COUNT]*Bee
-
 	for i := 0; i < BASES_COUNT; i++ {
-		bases[i] = MakeBase()
-		for j := 0; j < COUNT; j++ {
-			bees[i * COUNT + j] = Born(bases[i])
-			go bees[i * COUNT + j].Living()
-		}
-
+		bases[i] = MakeBase(i)
 	}
 
-	go Monitoring(bees)
+	for i := 0; i < BASES_COUNT * COUNT; i++ {
+		bees[i] = Born(bases[i % BASES_COUNT])
+		go bees[i].Living()
+	}
+
+	for _, base := range bases {
+		go base.BaseLiving()
+	}
+
+	go Monitoring()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		loop(bees, scanner.Text())
+		loop(scanner.Text())
 	}
 }
 
-func loop(bees [COUNT*BASES_COUNT]*Bee, input string) {
+func loop(input string) {
 	switch input {
-	case "1", "2", "3", "4":
-		// Killing all bees from base
-		for _, bee := range bees {
-			id, _ := strconv.Atoi(input)
-			bases[id - 1].color = randomColor() // Change color of base
-			if bases[id - 1] == bee.base { bee.Kill() }
-		}
 	case "q":
 		os.Exit(0)
+	default:
+		id, _ := strconv.Atoi(input)
+		bases[id - 1].BaseKill()
 	}
 }
 
-func Monitoring(bees [COUNT*BASES_COUNT]*Bee)  {
+func Monitoring()  {
 	t := 0
-	b := color.New(color.FgWhite).SprintfFunc()
-	w := color.New(color.FgWhite).SprintfFunc()
 
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
 		t += 1
-		out := w("Turn: %d\n", t)
+
+		out := fmt.Sprintf("Turn: %d. %s\n", t, basesStat())
 		for j := 0; j < HEIGHT; j++ {
 			for i := 0; i < WIDTH; i++ {
 				s := " "
@@ -98,64 +108,164 @@ func Monitoring(bees [COUNT*BASES_COUNT]*Bee)  {
 				}
 				for _, base := range bases {
 					if base.x == i && base.y == j {
-						s = b("@")
+						s = base.color("@")
 					}
 				}
 				out += s
 			}
 			out += "\n"
 		}
-		clear_console()
-		fmt.Println(out)
+		clearConsole()
+		fmt.Print(out)
+
+		if checkGameOver() {
+			fmt.Println("Game over")
+			os.Exit(0)
+		}
 	}
 }
+
+func basesStat() string {
+	out := []string{}
+	for i, base := range bases {
+		out = append(out, base.color("Base %d: %d | %d | %v", i + 1, base.count, base.health, base.live))
+	}
+	return strings.Join(out, " ")
+}
+
+func checkGameOver() bool {
+	liveBases := 0
+	for _, base := range bases {
+		if base.live { liveBases += 1 }
+	}
+
+	return liveBases == 1
+}
+
 
 func (bee *Bee) Move(x int, y int) {
 	newX := bee.x + x
 	newY := bee.y + y
 	if newX >= 0 && newX <= WIDTH { bee.x = newX }
 	if newY >= 0 && newY <= HEIGHT { bee.y = newY }
+
+	for _, base := range bases {
+		if base.x == newX && base.y == newY && bee.base != base && base.live {
+			bee.health -= HIT_BACK
+			base.health -= HIT
+		}
+	}
+
+	for _, beeLoop := range bees {
+		if beeLoop.x == newX && beeLoop.y == newY && bee.base != beeLoop.base && beeLoop.live {
+			bee.health -= HIT_BACK
+			beeLoop.health -= HIT
+		}
+	}
 }
 
 func (bee *Bee) Living() {
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
+		if bee.health < 0 {
+			bee.Kill()
+			//return
+		}
+
 		if bee.live {
 			bee.Move(rand.Intn(3)-1, rand.Intn(3)-1)
 		} else {
-			bee.Revival(1 + rand.Intn(5))
+			bee.Revival(TIME_TO_REVIVAL + rand.Intn(TIME_TO_REVIVAL))
 		}
 	}
 }
 
+func (base *Base) BaseLiving() {
+	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
+	for range ticker.C {
+		if base.live && rand.Intn(100) <= BASE_MOVING_PERCENT {
+			base.BaseMove(rand.Intn(3)-1, rand.Intn(3)-1)
+		}
+
+		if base.health < 0 || base.count == 0 {
+			base.BaseKill()
+			return
+		}
+	}
+}
+
+func (base *Base) BaseMove(x int, y int) {
+	newX := base.x + x
+	newY := base.y + y
+	if newX >= 0 && newX <= WIDTH { base.x = newX }
+	if newY >= 0 && newY <= HEIGHT { base.y = newY }
+
+	for _, baseLoop := range bases {
+		if baseLoop.x == newX && baseLoop.y == newY && baseLoop != base && baseLoop.live {
+			base.health -= HIT_BACK * 2
+			baseLoop.health -= HIT * 2
+		}
+	}
+
+	for _, bee := range bees {
+		if bee.x == newX && bee.y == newY && bee.base != base && bee.live {
+			bee.health -= HIT_BACK * 2
+			//base.health -= HIT
+		}
+	}
+}
+
+
+func (base *Base) BaseKill() {
+	for _, bee := range bees {
+		if bee.live && bee.base == base {
+			bee.Kill()
+		}
+	}
+
+	base.live = false
+	base.color = color.New(color.Faint).SprintfFunc()
+}
+
 func (bee *Bee) Kill() {
 	bee.live = false
+	bee.health = BEE_HEALTH
+	bee.x = bee.base.x
+	bee.y = bee.base.y
+	bee.base.count -= 1
 }
 
 func (bee *Bee) Revival(seconds int) {
 	time.Sleep(time.Second * time.Duration(seconds))
-	bee.x = bee.base.x
-	bee.y = bee.base.y
-	bee.live = true
-}
-
-func Born(base *Base) (bee *Bee) {
-	return &Bee{Point: base.Point, base: base, live: true}
-}
-
-func randomColor() func(format string, a ...interface{}) string {
-	randomColor := colors[rand.Intn(len(colors))]
-	return color.New(randomColor).SprintfFunc()
-}
-
-func MakeBase() (* Base) {
-
-	return &Base{
-		Point: Point{rand.Intn(WIDTH), rand.Intn(HEIGHT)},
-		color: randomColor(),
+	if bee.base.live {
+		bee.base.count += 1
+		bee.live = true
 	}
 }
 
-func clear_console() {
-	fmt.Print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+func Born(base *Base) (bee *Bee) {
+	base.count += 1
+	return &Bee{Point: base.Point, base: base, live: true}
+}
+
+//func randomColor() func(format string, a ...interface{}) string {
+//	randomColor := colors[rand.Intn(len(colors))]
+//	return color.New(randomColor).SprintfFunc()
+//}
+
+func MakeBase(i int) (* Base) {
+	return &Base{
+		Point: Point{rand.Intn(WIDTH), rand.Intn(HEIGHT)},
+		color: color.New(colors[i]).SprintfFunc(),
+		//color: randomColor(),
+		count: 0,
+		live: true,
+		health: BASE_HEALTH,
+	}
+}
+
+func clearConsole() {
+	fmt.Print("n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+	termbox.Clear(termbox.ColorWhite, termbox.ColorBlack)
+	termbox.Flush()
 }
