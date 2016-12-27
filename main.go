@@ -12,11 +12,11 @@ import (
 	"strings"
 )
 
-const COUNT = 250
-const BASES_COUNT = 5
-const WIDTH = 150
-const HEIGHT = 35
-const TURN_TIME = 50
+const COUNT = 150
+const BASES_COUNT = 10
+const WIDTH = 120
+const HEIGHT = 40
+const TURN_TIME = 100
 const HIT = 80
 const HIT_BACK = 30
 const BASE_HEALTH = 500
@@ -81,9 +81,12 @@ func main() {
 }
 
 func loop(input string) {
-	switch input {
-	case "q":
+	switch {
+	case input == "q":
 		os.Exit(0)
+	case strings.HasPrefix(input, "c"):
+		id, _ := strconv.Atoi(input[1:])
+		bases[id - 1].color = randomColor()
 	default:
 		id, _ := strconv.Atoi(input)
 		bases[id - 1].BaseKill()
@@ -249,15 +252,15 @@ func Born(base *Base) (bee *Bee) {
 	return &Bee{Point: base.Point, base: base, live: true}
 }
 
-//func randomColor() func(format string, a ...interface{}) string {
-//	randomColor := colors[rand.Intn(len(colors))]
-//	return color.New(randomColor).SprintfFunc()
-//}
+func randomColor() func(format string, a ...interface{}) string {
+	randomColor := colors[rand.Intn(len(colors))]
+	return color.New(randomColor).SprintfFunc()
+}
 
 func MakeBase(i int) (* Base) {
 	return &Base{
 		Point: Point{rand.Intn(WIDTH), rand.Intn(HEIGHT)},
-		color: color.New(colors[i]).SprintfFunc(),
+		color: color.New(colors[i % len(colors)]).SprintfFunc(),
 		//color: randomColor(),
 		count: 0,
 		live: true,
