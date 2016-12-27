@@ -8,14 +8,14 @@ import (
 	"os"
 	"strconv"
 	"github.com/fatih/color"
-	"github.com/nsf/termbox-go" // TODO maybe change fatih/color
+	"github.com/nsf/termbox-go" // TODO maybe this will replace fatih/color
 	"strings"
 )
 
-const COUNT = 150
-const BASES_COUNT = 10
-const WIDTH = 120
-const HEIGHT = 40
+const COUNT = 200
+const BASES_COUNT = 6
+const WIDTH = 150
+const HEIGHT = 32
 const TURN_TIME = 100
 const HIT = 80
 const HIT_BACK = 30
@@ -96,6 +96,7 @@ func loop(input string) {
 func Monitoring()  {
 	ticker := time.NewTicker(time.Millisecond * TURN_TIME)
 	for range ticker.C {
+		termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 		out := fmt.Sprintf(Stat())
 		for j := 0; j < HEIGHT; j++ {
 			for i := 0; i < WIDTH; i++ {
@@ -114,8 +115,9 @@ func Monitoring()  {
 			}
 			out += "\n"
 		}
-		clearConsole()
+		//clearConsole()
 		fmt.Print(out)
+		termbox.Flush()
 
 		if checkGameOver() {
 			fmt.Println("Game over")
@@ -134,7 +136,7 @@ func Stat() string {
 	for _, base := range bases {
 		outBases = append(outBases, base.color("[Bees: %d Health: %d]", base.count, base.health))
 	}
-	return fmt.Sprintf("All bees: %d %s\n", beesCount, strings.Join(outBases, " "))
+	return fmt.Sprintf("\n\n\n\n\n\nAll bees: %d %s\n", beesCount, strings.Join(outBases, " "))
 }
 
 func checkGameOver() bool {
@@ -266,10 +268,4 @@ func MakeBase(i int) (* Base) {
 		live: true,
 		health: BASE_HEALTH,
 	}
-}
-
-func clearConsole() {
-	fmt.Print("n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-	termbox.Clear(termbox.ColorWhite, termbox.ColorBlack)
-	termbox.Flush()
 }
